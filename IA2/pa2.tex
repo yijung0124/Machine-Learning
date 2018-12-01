@@ -1,0 +1,256 @@
+\documentclass{article}
+%\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{bm}
+\usepackage[noend]{algpseudocode}
+% titlepage causes separate title page
+% our latex is biased off 1in vertically and horizontally
+\newtheorem{theorem}{Theorem}
+\setlength{\topmargin}{0.1in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9in}
+\setlength{\textwidth}{6.5in}
+% require that floats fill 90% of a page in order for that page to be
+% ``float-only''
+\renewcommand{\dblfloatpagefraction}{0.9}
+\renewcommand{\floatpagefraction}{0.9}
+%\renewcommand{\baselinestretch}{1.2} % interline spacing
+%\setlength{\parindent}{0in}
+%\parskip=10pt plus2pt minus2pt
+%\setlength{\unitlength}{0.1in}
+%\pagestyle{empty} % no page numbering
+\newenvironment{bibparagraph}{\begin{list}{}{ %
+    \setlength{\labelsep}{-\leftmargin} %
+    \setlength{\labelwidth}{0pt} %
+    \setlength{\itemindent}{-\leftmargin} %
+    \setlength{\listparindent}{0pt}}}{\end{list}}
+\def\makefigure#1#2{\begin{figure}
+\begin{center}
+\input{#1}
+\end{center}
+\caption{#2}
+\label{#1}
+\end{figure}}
+
+\def\limplies{\; \supset \;}
+\def\land{\: \wedge \:}
+\def\lor{\: \vee \:}
+\def\iff{\; \equiv \;}
+\def\lnot{\neg}
+\def\lforall#1{\forall \: #1 \;}
+\def\lexists#1{\exists \: #1 \;}
+\def\glitch#1{{\tt #1}} % glitch on
+%\def\glitch#1{} % glitch off
+\def\comment#1{}
+\def\pnil{[\;]}
+\def\pif{\; \mbox{\tt :- } \;}
+\def\tuple#1{$\langle #1\rangle$}
+\def\mtuple#1{\langle #1\rangle}
+\def\ceiling#1{\lceil #1\rceil}
+\def\floor#1{\lfloor #1\rfloor}
+\def\centerps#1{\begin{center}
+\leavevmode
+\epsfbox{#1}
+\end{center}}
+\def\argmax{\mathop{\rm argmax}}
+\def\argmin{\mathop{\rm argmin}}
+\def\grad{\nabla\!}
+\def\celsius{^\circ\mbox{C}}
+\renewcommand{\labelenumi}{(\alph{enumi})}
+
+\def\x{{\bf x}}
+\def\w{{\bf w}}
+
+\begin{document}
+{\Large
+\begin{center}
+CS534 --- Implementation Assignment 2 --- {Due 11:59PM Oct 27, 2018}
+\end{center}
+}
+
+\noindent{\Large
+\textbf{General instructions.
+}}\\ \\
+1. The following languages are acceptable: Java, C/C++, Python, Matlab \\\\
+2. You can work in a team of up to 3 people. Each team will only need to submit one copy of the source code and report. You need to explicitly state each member's contribution in percentages (a rough estimate).\\\\
+3. Your source code and report will be submitted through TEACH \\\\
+{4. You need to submit a readme file that contains the programming language version you use (e.g. python 2.7 ) and the command to run your code (e.g. python main.py).\\\\
+{5. Please make sure that you can be run code remotely on  the server (i.e. babylon01 ) especially if you develop your code using c/c++ under visual studio. }\\\\
+6. Be sure to answer all the questions in your report. You will be graded based on your code as well as the report. In particular, \textbf{the clarity and quality of the report will be worth 10 pts}. So please write your report in clear and concise manner. Clearly label your figures, legends, and tables.\\\\
+7. In your report, the results should always be accompanied by discussions of the results. Do the results follow your expectation? Any surprises? What kind of explanation can you provide? \\
+\newpage
+\noindent{\Large
+\textbf{Perceptron algorithm for Optical Character Recognition \\
+(total points: 80 pts + 10 report pts + 10 result pts)
+}}\\
+\paragraph{Task description.} In the Optical Character Recognition (OCR) we seek to predict a number (between 0 to 9) for a given image of handwritten digit. In this assignment we simplify the OCR into a binary classification task. Specifically, we consider predictions for only two numbers \textbf{3 and 5}. The goal in this assignment is to develop variations of the \textbf{perceptron algorithm} to classify handwritten digits of numbers 3 or 5.
+\paragraph{Data.} All the handwritten digits are originally taken from
+http://www.kaggle.com/c/digit-recognizer/data
+The original dataset contains the sample digits suitable for OCR. We extract samples with only labels 3 and 5. Following a little pre-processings we produce three datasets for this assignment as follows:\\
+\begin{enumerate}
+\item  \textbf{Train Set (pa2\_train.csv):} Includes 4888 rows (samples). Each sample is in fact a list of 785 values. The first number is the digit's label which is 3 or 5. The other 784 floating values are the the flattened gray-scale values from a 2d digital handwritten image with shape $28 \times 28$.
+\item \textbf{Validation Set (pa2\_valid.csv):} Includes 1629 rows. Each row obeys the same format given for the train set. This set will be used to select your best trained model.
+\item \textbf{Test Set (pa2\_test.csv):} Includes  1629 rows. Each row contains only 784 numbers. The label column is omitted from each row.
+\end{enumerate}
+\paragraph{Important Guidelines.} {For all parts of this assignment:
+\begin{enumerate}
+\item Please assign labels +1 to number 3 and -1 to label 5. In your produced predictions, please use only \underline{+1 and -1} as labels not 3 and 5.
+\item Please \underline{do not shuffle} the given data. While in practice shuffling should be used to improve training convergence, for this assignment we ask you not to shuffle the data to ensure determinstic results for assessment purpose.
+\item To simplify the notation in this assignment, your load function which loads train, validation and test dataset should add a \underline{bias feature} to the dataset. The bias feature is a feature with value of 1.0 for all of the samples. Therefore the feature size for each samples will become 785.
+\end{enumerate}
+}
+\noindent\rule{16cm}{0.4pt}
+\paragraph{Part 1 (20 pts) : Online Perceptron.} In the online perceptron algorithm we train a linear classifier with parameter $\bm{w}$ to predict the label of a sample with equation:
+\begin{equation}
+\hat{y} = \mbox{sign}(\bm{w}^{T}\bm{x})
+\label{eqpredict}
+\end{equation} 
+Where $\hat{y} \in \{-1,1\}$. Algorithm~\ref{alg:op} describes the online perceptron.\\
+\begin{algorithm}[H]
+\caption{Online Perceptron}\label{alg:op}
+\begin{algorithmic}[1]
+\Procedure{OnlinePerceptron}{}
+\State $\bm{w_0} \gets \bm{0}$
+\State $t \gets 0$
+\State while iter $<$ iters:
+\State \hspace{10mm} \mbox{for all sample} $\bm{x_t}$ \mbox{in train set}: // no shuffling
+\State \hspace{15mm} $u_t \gets sign(\bm{w_t}^{T} \bm{x_t})$
+\State \hspace{15mm} if $y_t u_t \leq 0$:
+\State \hspace{20mm} $\bm{w_{t+1}} \gets \bm{w_t} + y_t \bm{x_t}$
+\State \hspace{20mm} $t \gets t + 1$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+Where $\bm{x_t}$ is the sample at time step t and $y_t$ is its correct label. As we can see, the weight at time step t+1 is equivalent to below summation:\\
+\begin{equation}
+    \bm{w_{t+1}} = \sum_{\bm{x_i}\in S_t} y_i\bm{x_i}
+\end{equation}
+where $S_t$ is a list containing all the previous samples that have been incorrectly classified by the model (some example may appear multiple times).  Therefore the prediction at time (t+1) can also be given by:\\
+\begin{equation}
+    \hat{y}_{t+1} = \mbox{sign}((\sum_{\bm{x_i}\in S_t} y_i\bm{x_i})^{T}\bm{x_{t+1}})
+\end{equation}
+In this part we are interested in the following experiments for the online perceptron algorithm:
+\begin{enumerate}
+\item Implement the online perceptron model with algorithm described in Algorithm~\ref{alg:op}.  Set the $\mbox{iters}=15$. During the training, at the end of each iteration use the current $\bf w$ to make prediction on the validation samples. Record the accuracies for the train and validation at the end of each iteration. Plot the recorded train and validation accuracies versus the iteration number.
+\item Does the train accuracy reach to 100\%? Why?
+\item Use the validation accuracy to decide the test number for $iters$. Apply the resulting model to make predictions for the samples in the test set. Generate the prediction file \underline{oplabel.csv}. Please note that your file should only contain +1 (for 3) and -1 (for 5) and the number of rows should be the same as \underline{pa2\_test.csv}. 
+\end{enumerate}
+\paragraph{Part 2 (20 pts) : Average Perceptron.} In this part we are interested to utilize average perceptron to deal with some issues regarding the online perceptron. Algorithm~\ref{alg:ap} describes the average perceptron.\\
+\begin{algorithm}
+\caption{Average Perceptron}\label{alg:ap}
+\begin{algorithmic}[1]
+\Procedure{AveragePerceptron}{}
+\State $\bm{w} \gets \bm{0}$
+\State $c \gets 0$
+\State $\bar{\bm{w}} \gets \bm{0}$ // keeps running average weight
+\State $s \gets 0$ // keeps sum of cs
+\State while iter $<$ iters:
+\State \hspace{10mm} \mbox{for all sample} $\bm{x_t}$ \mbox{in the train set}: // no shuffling
+\State \hspace{15mm} $u_t \gets \mbox{sign}(\bm{w}^{T} \bm{x_t})$
+\State \hspace{15mm} if $y_t u_t \leq 0$:
+\State \hspace{20mm} $\mbox{if} \hspace{1mm} s + c > 0:$	
+\State \hspace{25mm} $\bar{\bm{w}} \gets \frac{s \bar{\bm{w}} + c\bm{w}}{s + c}$
+\State \hspace{20mm} $s \gets s + c$		
+\State \hspace{20mm} $\bm{w} \gets \bm{w} + y_t \bm{x_t}$
+\State \hspace{20mm} $c \gets 0$
+\State \hspace{15mm} else: $c \gets c + 1$
+\State if c $>$ 0:
+\State \hspace{10mm} $\bar{\bm{w}} \gets \frac{s \bar{\bm{w}} + c\bm{w}}{s + c}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}\\
+As shown in the Algorithm~\ref{alg:ap}, we compute a running average $\bar{\bm{w}}$ which is used to predict the label of any sample $\bm{x_i}$ as follows:\\
+\begin{equation}
+    \hat{y}(x) = \mbox{sign}(\bm{\bar{w}}^{T}\bm{x_i})
+\end{equation}
+We are interested in below experiments for average perceptron:
+\begin{enumerate}
+\item Please implement the average perceptron described in Algorithm~\ref{alg:ap}.
+\item Plot the train and validation accuracies versus the iteration number for  $\mbox{iters}=1, ...,15$.
+\item How average model has affected the validation accuracy comparing to the online perceptron?
+\end{enumerate}
+\paragraph{ Part 3 (40 pts).  Polynomial Kernel Perceptron.}
+The online/average perceptron in Algorithm(~\ref{alg:op} and ~\ref{alg:ap}) are linear models. In order to increase the model's complexity, one can project the feature vectors into a high (or even infinite) dimensions by applying a projection function $\Phi$. In this case the prediction at time (t+1) is given by:\\
+\begin{equation}
+    \hat{y}_{t+1} = \mbox{sign}(\Phi(w_{t+1})^{T}\Phi(x_{t+1}))
+\end{equation}
+Or equivalently by:
+\begin{equation}
+    \hat{y}_{t+1} = \mbox{sign}((\sum_{x_i\in S_{t}}y_i\Phi(x_i))^{T}\Phi(x_{t+1}))
+\end{equation}
+Where $S_t$ is a list containing all the previous sample vectors for which the model has a wrong predictions (there can be repetitions for a sample). Simplifying above equation yields:\\
+\begin{equation}
+    \hat{y}_{t+1} = \mbox{sign}(\sum_{x_i\in S_{t}}y_i\Phi(x_{t+1})^{T}\Phi(x_i)))
+    \label{eq_6}
+\end{equation}
+As we see in the equation~\ref{eq_6}, the prediction at each time steps utilizes a similarity terms i.e. $\Phi(x_{t+1})^{T}\Phi(x_i)$ between the current projected sample $\Phi(x_{t+1})$ and all the previous samples which we have incorrect predictions.\\
+Let's define a kernel function with parameter vectors x and y to be $k(x, y)=\Phi(x)^{T}\Phi(y)$. Therefore the equation is simplified to: 
+\begin{equation}
+    \hat{y}_{t+1} = \mbox{sign}(\sum_{x_i\in S_{t}}y_i k(x_{t+1}, x_i))
+    \label{eq_poly}
+\end{equation}
+There are different kernel functions. For example to compute the similarity between vectors x and y in the polynomial space (with polynomial degree p) we utilize below kernel:
+\begin{equation}
+    k_{p}(x, y) = (1 + x^{T}y)^{p}
+    \label{kernel}
+\end{equation}
+For $p = 1$ we have a linear kernel. In this part we are interested in polynomial kernel perceptron as described in Algorithm~\ref{alg:kp}:
+\begin{algorithm}
+\caption{Kernel (polynomial) Perceptron}\label{alg:kp}
+\begin{algorithmic}[1]
+\Procedure{KernelPerceptron}{}
+\State $N: \mbox{number of train samples}, F: \mbox{number of features}$
+\State $X_{N \times F} \gets \mbox{train set}$
+\State $\bm{\alpha}_{N \times 1} \gets \bm{0}$
+\State $\bm{y}_{N \times 1} \gets \mbox{train labels}$
+\State $k_{p}(\bm{x}, \bm{y}) = (1 + 
+\bm{x}^{T}\bm{y})^{p}$
+\State $\textbf{K}_{N\times N}(i, j) = k_p(x_i, x_j) \hspace{10mm} \forall x_i, x_j \in X$ \\ 
+\State while iter $<$ iters:
+\State \hspace{10mm} \mbox{for all sample} $\bm{x_i} \in X$: // no shuffling
+\State \hspace{20mm} $u=\mbox{sign}(\sum_j \textbf{K}[j,i]\alpha[j] \bm{y}[j])$
+\State \hspace{20mm} if $y_i u\leq 0$:
+\State \hspace{25mm} $\bm{\alpha}[i] \gets \bm{\alpha}[i] + 1$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}\\
+Please consider below experiments:\\
+\begin{enumerate}
+\item Implement the polynomial kernel function $k_p$ in the Algorithm~\ref{alg:kp}. This function takes two vectors $x_1$ and $x_2$ and an integer $p$ for the polynomial degree, and returns a real value. 
+\item Define a Gram matrix $\textbf{K}$ with size $N \times N$ where N is the number of training samples. Fill matrix $K(i, j) = k_{p}(x_i, x_j)$ for all of the pairs in the training set.
+\item Implement the rest of the kernel perceptron in Algorithm~\ref{alg:kp}. For each $p$ in [1, 2, 3, 7, 15]: \\
+1) Run the algorithm to compute $\alpha$.\\
+2) At the end of each iteration use the current $\alpha$ to predict validation set.\\
+3) Record the train and validation accuracy for each iteration and plot the train and validation accuracies versus the iteration number.\\
+4) Record the best validation accuracy achieved for each $p$ over all iterations.
+\item Plot the recorded best validation accuracies versus degrees. Please explain how $p$ is affecting the train and validation performance. 
+\item Use your best $\alpha$ (the best you found over all $d$ and iterations above) to predict the test data-set. Please name the predicted file as \underline{kplabel.csv}. 
+\end{enumerate}
+
+\paragraph{ Submission.}{Your submission should include the following:\\ 
+1) Your source code with a short instruction on how to run the code in a \underline{readme.txt}.\\
+2) Your report only in \underline{pdf}, which begins with a general introduction section, followed by one section for each part of the assignment.\\
+3) Two prediction files \underline{oplabel.csv} and \underline{kplabel.csv}. These prediction file will be scored against the ground truth $y$ values and 10\% of the grade will be based on this score.\\
+4) Please note that all the files should be in one folder and compressed only by \underline{.zip.}}
+%\textbf{Note, your report should have the following structure:}
+
+%\begin{enumerate}
+%  \item List group members, indicate project contribution for each member in percentages.
+%  \item Introduction (Briefly state the problem you are solving).
+%  \item Learning rate for gradient descent.
+%  \item \textcolor{red}{ Table of feature statistics and weights you learned for all features.}
+%  \item \textcolor{red}{Experiments with different $\lambda$ values (thoroughly answer 4 questions listed in Part 3).}
+%  \item \textcolor{red}{  Experiments with different learning rate values using the non-normalized version of the data.}
+%\end{enumerate}
+%
+
+\end{document}
